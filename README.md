@@ -133,6 +133,10 @@ Implementation notes:
 - Per-agent rate limits (payments per hour) and time windows
 - Intents: let the agent request a swap through NEAR Intents under the same caps
 
+## Our other project
+
+The same team also submitted **[Rungs](https://github.com/blackwingArtisan/rungs)** (Social Money): a team bounty board where the approval a payout needs scales with its size and the contributor's earned reputation, with big payouts going to a Sputnik DAO vote. The two are independent codebases.
+
 ## Disclosure (hackathon rules)
 
 - **Built during NEAR HACKATHON, 2026-11-14.** All code in this repo was written during the hackathon. Nothing is pre-existing.
