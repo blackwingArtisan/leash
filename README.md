@@ -24,6 +24,7 @@ You can't make a model un-jailbreakable. You can make it irrelevant whether it g
 | **Daily cap** across all payees, resetting at 00:00 UTC | contract | over it, held for the owner |
 | **Tripwire**: N blocked attempts in a day | contract | the agent is **frozen** until the owner unfreezes it |
 | **Owner controls**: approve/reject, freeze, set policy, withdraw | contract, owner key only | the agent can't call any of them |
+| **Pay-only agent key**: the agent's only access key is a NEAR function-call key for `vault.pay` with a 0.25 NEAR gas allowance | protocol | a stolen agent key can't transfer, can't call `set_agent`/`approve`, can't add keys |
 
 Blocked attempts don't revert. `pay` never panics on a policy failure, so every attempt the agent made, including the malicious ones, stays on-chain as evidence. Every outcome is also emitted as a NEP-297 event (`EVENT_JSON:{"standard":"leash",...}`) for indexers and alerting.
 
@@ -84,7 +85,8 @@ near account create-account sponsor-by-faucet-service my-leash-owner.testnet \
 near account create-account sponsor-by-faucet-service my-attacker.testnet \
   autogenerate-new-keypair save-to-legacy-keychain network-config testnet create
 
-# 4. Deploy: creates vault/agent/merchant sub-accounts, deploys, sets the policy, funds the vault
+# 4. Deploy: creates vault/agent/merchant sub-accounts, deploys, sets the policy, funds the vault,
+#    then swaps the agent's full-access key for a pay-only function-call key
 cd ../app && npm install
 OWNER=my-leash-owner.testnet ATTACKER=my-attacker.testnet npm run setup
 # → vault balance: ~4.7 NEAR, agent policy printed
@@ -100,6 +102,8 @@ npm start   # → http://localhost:8787
 # Optional: let Claude run the agent instead
 ANTHROPIC_API_KEY=... npm run agent -- --brain=claude
 ```
+
+Check the agent's key yourself: `near account list-keys agent.leash-demo-6866.testnet network-config testnet now` shows one FunctionCall key, receiver `vault.leash-demo-6866.testnet`, method `pay`. We tried escaping with it on testnet: a direct transfer fails with `AccessKeyRequiresFullAccessActionError`, and calling `set_agent` fails with `AccessKeyMethodNameMismatchActionError`.
 
 Keys stay in the NEAR CLI keychain (`~/.near-credentials/testnet`), never in the repo.
 

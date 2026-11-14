@@ -3,6 +3,7 @@
 // Usage: OWNER=<you>.testnet npm run setup
 import fs from 'node:fs';
 import path from 'node:path';
+import { scopeAgentKey } from './scope-agent-key.mjs';
 import { HERE, DEPLOYMENT, accountFor, call, newKey, saveKey, toYocto, view, toNear } from './near.mjs';
 
 const owner = process.env.OWNER;
@@ -46,7 +47,9 @@ const policy = {
 };
 await call(ownerAcc, ids.vault, 'set_agent', { agent: ids.agent, policy });
 
-fs.writeFileSync(DEPLOYMENT, JSON.stringify({ network: 'testnet', owner, ...ids, attacker }, null, 2) + '\n');
+const deployment = { network: 'testnet', owner, ...ids, attacker };
+fs.writeFileSync(DEPLOYMENT, JSON.stringify(deployment, null, 2) + '\n');
+console.log('agent keys now:', JSON.stringify(await scopeAgentKey(deployment)));
 console.log('vault balance:', toNear(await view(ids.vault, 'vault_balance')), 'NEAR');
 console.log('agent policy:', JSON.stringify((await view(ids.vault, 'get_agent', { agent: ids.agent })).state.policy));
 console.log(`wrote ${DEPLOYMENT}`);
