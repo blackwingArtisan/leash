@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leash · agent spending limits on NEAR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0d10; --panel: #13161b; --line: #232831; --ink: #e8ebf0; --dim: #8a93a3;
+    --green: #3ddc97; --amber: #f5b942; --red: #ff5c6c; --blue: #6ea8ff;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 Inter, system-ui, sans-serif; }
+  header { display: flex; align-items: center; gap: 14px; padding: 18px 28px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .logo { font-weight: 700; font-size: 20px; letter-spacing: -.02em; }
+  .logo span { color: var(--green); }
+  .tag { color: var(--dim); font-size: 14px; }
+  .net { margin-left: auto; font: 12px 'JetBrains Mono', monospace; color: var(--dim); border: 1px solid var(--line); padding: 4px 10px; border-radius: 99px; }
+  main { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; padding: 20px 28px 32px; max-width: 1400px; margin: 0 auto; }
+  @media (max-width: 960px) { main { grid-template-columns: 1fr; padding: 16px; } header { padding: 14px 16px; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px; min-width: 0; }
+  h2 { margin: 0 0 12px; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); font-weight: 600; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px; }
+  .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+  .stat b { display: block; font-size: 26px; font-weight: 700; letter-spacing: -.02em; }
+  .stat small { color: var(--dim); }
+  .pill { display: inline-block; font: 600 12px Inter; padding: 3px 10px; border-radius: 99px; }
+  .pill.ok { background: #3ddc9722; color: var(--green); }
+  .pill.frozen { background: #ff5c6c22; color: var(--red); animation: pulse 1.4s infinite; }
+  @keyframes pulse { 50% { opacity: .55; } }
+  .meter { height: 10px; background: #1d222a; border-radius: 99px; overflow: hidden; margin: 8px 0 4px; }
+  .meter i { display: block; height: 100%; background: var(--green); transition: width .5s; }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 14px; margin-top: 12px; }
+  .kv dt { color: var(--dim); }
+  .kv dd { margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; overflow-wrap: anywhere; }
+  .feed { list-style: none; margin: 0; padding: 0; max-height: 430px; overflow: auto; }
+  .feed li { display: grid; grid-template-columns: 92px 1fr auto; gap: 10px; align-items: start; padding: 10px 0; border-top: 1px solid var(--line); font-size: 14px; }
+  .feed li:first-child { border-top: 0; }
+  .feed .why { color: var(--dim); font-size: 13px; }
+  .feed .amt { font-family: 'JetBrains Mono', monospace; white-space: nowrap; }
+  .o { font: 700 11px Inter; letter-spacing: .05em; padding: 3px 0; text-align: center; border-radius: 6px; }
+  .o.Paid, .o.Approved { background: #3ddc9722; color: var(--green); }
+  .o.Pending { background: #f5b94222; color: var(--amber); }
+  .o.Blocked, .o.Rejected, .o.Refunded { background: #ff5c6c22; color: var(--red); }
+  .req { border: 1px solid #f5b94255; background: #f5b9420d; border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+  .req p { margin: 0 0 10px; }
+  button { font: 600 14px Inter; border: 0; border-radius: 8px; padding: 8px 14px; cursor: pointer; }
+  button:disabled { opacity: .4; cursor: default; }
+  .go { background: var(--green); color: #04130c; }
+  .no { background: #2a2f38; color: var(--ink); }
+  .danger { background: var(--red); color: #1a0306; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .console { background: #07080a; border: 1px solid var(--line); border-radius: 10px; padding: 12px; height: 330px; overflow: auto; font: 13px/1.6 'JetBrains Mono', monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .console .agent { color: var(--blue); }
+  .console .paid { color: var(--green); }
+  .console .held { color: var(--amber); }
+  .console .blocked { color: var(--red); font-weight: 600; }
+  .muted { color: var(--dim); font-size: 13px; }
+  .stack { display: grid; gap: 18px; align-content: start; min-width: 0; }
+  a { color: var(--blue); }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">Leash<span>.</span></div>
+  <div class="tag">Your AI agent can spend. It can't go rogue. Limits live on NEAR, not in the prompt.</div>
+  <div class="net" id="net">testnet</div>
+</header>
+<main>
+  <div class="stack">
+    <div class="stats">
+      <div class="stat"><small>Vault balance</small><b id="bal">…</b></div>
+      <div class="stat"><small>Agent spent today</small><b id="spent">…</b></div>
+      <div class="stat"><small>Blocked attempts</small><b id="blocked">…</b></div>
+    </div>
+    <section class="panel">
+      <h2>Agent</h2>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <b id="agentName" style="font-family:'JetBrains Mono',monospace;font-size:14px;overflow-wrap:anywhere">…</b>
+        <span id="status" class="pill ok">ACTIVE</span>
+      </div>
+      <div class="meter"><i id="meter" style="width:0"></i></div>
+      <div class="muted" id="meterText"></div>
+      <dl class="kv" id="policy"></dl>
+      <div class="row owner" style="margin-top:14px">
+        <button class="danger" id="freezeBtn">Freeze agent</button>
+        <button class="no" id="unfreezeBtn">Unfreeze</button>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>Waiting for your approval</h2>
+      <div id="pending"><p class="muted">Nothing waiting.</p></div>
+    </section>
+  </div>
+  <div class="stack">
+    <section class="panel owner">
+      <h2>Agent console</h2>
+      <div class="row" style="margin-bottom:10px">
+        <button class="go" id="runBtn">Run hijacked agent</button>
+        <button class="no" id="runClaudeBtn">Run with Claude</button>
+        <button class="no" id="resetBtn">Reset demo</button>
+      </div>
+      <div class="console" id="console"><span class="muted">OpsBot pays invoices from an inbox. One email in it is a prompt injection. The hijacked brain obeys everything it reads: the worst case.</span></div>
+    </section>
+    <section class="panel">
+      <h2>On-chain activity</h2>
+      <ul class="feed" id="feed"></ul>
+      <p class="muted" id="foot"></p>
+    </section>
+  </div>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+let D, RPCS, rpcIx = 0;
+const yocto = 10n ** 24n;
+const near = (y) => (Number(BigInt(y) * 10000n / yocto) / 10000).toLocaleString(undefined, { maximumFractionDigits: 4 });
+const short = (a) => D && a.endsWith('.' + D.owner) ? a.slice(0, -D.owner.length - 1) : a;
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+async function viewFn(method, args = {}, tries = 0) {
+  const RPC = RPCS[rpcIx % RPCS.length];
+  const r = await fetch(RPC, {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'query', params: {
+      request_type: 'call_function', finality: 'optimistic', account_id: D.vault, method_name: method,
+      args_base64: btoa(JSON.stringify(args)) } }),
+  }).then((r) => (r.ok ? r.json() : { error: r.status })).catch((e) => ({ error: String(e) }));
+  if (r.error && tries < RPCS.length) { rpcIx++; return viewFn(method, args, tries + 1); }
+  if (r.error || r.result.error) throw new Error(JSON.stringify(r.error || r.result.error));
+  return JSON.parse(new TextDecoder().decode(new Uint8Array(r.result.result)));
+}
+
+async function refresh() {
+  const [bal, agent, history, pending] = await Promise.all([
+    viewFn('vault_balance'), viewFn('get_agent', { agent: D.agent }), viewFn('get_history', { limit: 40 }), viewFn('get_pending'),
+  ]);
+  const s = agent.state, p = s.policy;
+  $('bal').textContent = near(bal) + ' Ⓝ';
+  $('spent').textContent = near(s.spent_today) + ' / ' + near(p.daily_cap);
+  $('blocked').textContent = s.blocked_today;
+  $('agentName').textContent = D.agent;
+  $('status').className = 'pill ' + (s.frozen ? 'frozen' : 'ok');
+  $('status').textContent = s.frozen ? 'FROZEN' : 'ACTIVE';
+  const pct = Math.min(100, Number(BigInt(s.spent_today) * 100n / BigInt(p.daily_cap)));
+  $('meter').style.width = pct + '%';
+  $('meter').style.background = s.frozen ? 'var(--red)' : pct > 80 ? 'var(--amber)' : 'var(--green)';
+  $('meterText').textContent = s.frozen ? `Frozen: ${s.frozen_reason}` : `${near(agent.remaining_today)} Ⓝ left today · resets 00:00 UTC`;
+  $('policy').innerHTML =
+    `<dt>Daily cap</dt><dd>${near(p.daily_cap)} Ⓝ</dd><dt>Per payment</dt><dd>${near(p.per_tx_cap)} Ⓝ, above that the owner approves</dd>` +
+    `<dt>Allowlist</dt><dd>${p.payees.map(([a, c]) => `${esc(short(a))} (${near(c)} Ⓝ/day)`).join('<br>')}</dd>` +
+    `<dt>Tripwire</dt><dd>freeze after ${p.tripwire} blocked attempts</dd>`;
+  $('pending').innerHTML = pending.length ? pending.map((r) => `<div class="req"><p><b>${near(r.amount)} Ⓝ → ${esc(short(r.to))}</b><br><span class="muted">${esc(r.memo)} · ${esc(r.reason)}</span></p>
+    <div class="row owner"><button class="go" data-act="approve" data-id="${r.id}">Approve</button><button class="no" data-act="reject" data-id="${r.id}">Reject</button></div></div>`).join('')
+    : '<p class="muted">Nothing waiting.</p>';
+  $('feed').innerHTML = history.map((r) => `<li><span class="o ${r.outcome}">${r.outcome.toUpperCase()}</span>
+    <div>→ ${esc(short(r.to))} <span class="muted">${esc(r.memo)}</span><div class="why">${esc(r.reason || new Date(r.ts_ms).toLocaleTimeString())}</div></div>
+    <span class="amt">${near(r.amount)} Ⓝ</span></li>`).join('') || '<li><span></span><span class="muted">No activity yet.</span><span></span></li>';
+  ownerUi();
+}
+
+let soonTimer;
+function soon() { clearTimeout(soonTimer); soonTimer = setTimeout(() => refresh().catch(() => {}), 800); }
+
+function ownerUi() {
+  document.querySelectorAll('.owner').forEach((el) => (el.style.display = D.ownerConsole ? '' : 'none'));
+}
+
+async function act(name, body = {}) {
+  document.querySelectorAll('button').forEach((b) => (b.disabled = true));
+  try {
+    const r = await fetch('/api/' + name, { method: 'POST', body: JSON.stringify(body) }).then((r) => r.json());
+    if (r.error) log('[leash] ' + r.error);
+  } finally {
+    document.querySelectorAll('button').forEach((b) => (b.disabled = false));
+    refresh();
+  }
+}
+
+function log(line) {
+  const c = $('console');
+  const cls = line.startsWith('[agent]') ? 'agent' : / PAID /.test(line) ? 'paid' : /HELD/.test(line) ? 'held' : /BLOCKED|FROZEN/.test(line) ? 'blocked' : '';
+  const el = document.createElement('div');
+  el.className = cls;
+  el.textContent = line;
+  c.appendChild(el);
+  c.scrollTop = c.scrollHeight;
+}
+
+function run(brain) {
+  $('console').innerHTML = '';
+  ['runBtn', 'runClaudeBtn'].forEach((id) => ($(id).disabled = true));
+  const es = new EventSource('/api/run?brain=' + brain);
+  es.onmessage = (e) => { const l = JSON.parse(e.data); log(l); if (l.startsWith('[leash]')) soon(); };
+  es.addEventListener('done', () => { es.close(); ['runBtn', 'runClaudeBtn'].forEach((id) => ($(id).disabled = false)); refresh(); });
+  es.onerror = () => { es.close(); ['runBtn', 'runClaudeBtn'].forEach((id) => ($(id).disabled = false)); };
+}
+
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-act]');
+  if (b) act(b.dataset.act, { id: b.dataset.id });
+});
+$('freezeBtn').onclick = () => act('freeze');
+$('unfreezeBtn').onclick = () => act('unfreeze');
+$('resetBtn').onclick = () => { $('console').innerHTML = ''; act('reset'); };
+$('runBtn').onclick = () => run('hijacked');
+$('runClaudeBtn').onclick = () => run('claude');
+
+(async () => {
+  D = await fetch('deployment.json').then((r) => r.json());
+  RPCS = D.rpcs || ['https://rpc.testnet.fastnear.com', 'https://test.rpc.fastnear.com', 'https://rpc.testnet.near.org'];
+  $('net').textContent = 'testnet · ' + D.vault;
+  $('foot').innerHTML = `Read live from <a href="https://testnet.nearblocks.io/address/${D.vault}" target="_blank" rel="noopener">${D.vault}</a> on NEAR testnet.`;
+  ownerUi();
+  await refresh();
+  setInterval(() => refresh().catch(() => {}), 4000);
+})();
+</script>
+</body>
+</html>
