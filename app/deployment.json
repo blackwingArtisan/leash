@@ -1,9 +1,9 @@
 {
   "network": "testnet",
-  "owner": "leash-owner-76450.testnet",
-  "vault": "vault.leash-owner-76450.testnet",
-  "agent": "agent.leash-owner-76450.testnet",
-  "apiCredits": "api-credits.leash-owner-76450.testnet",
-  "hosting": "cloud-hosting.leash-owner-76450.testnet",
+  "owner": "leash-demo-6866.testnet",
+  "vault": "vault.leash-demo-6866.testnet",
+  "agent": "agent.leash-demo-6866.testnet",
+  "apiCredits": "api-credits.leash-demo-6866.testnet",
+  "hosting": "cloud-hosting.leash-demo-6866.testnet",
   "attacker": "leash-attacker-76450.testnet"
 }
