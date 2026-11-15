@@ -10,7 +10,7 @@
     "agent": "node agent.mjs"
   },
   "keywords": [],
-  "author": "",
+  "author": "Stubborn Otter Software",
   "license": "ISC",
   "type": "module",
   "dependencies": {

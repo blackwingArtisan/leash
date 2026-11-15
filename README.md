@@ -4,7 +4,7 @@ Leash is a NEAR smart contract that holds an AI agent's money and enforces its s
 
 **Tracks:** AI Security & Defense · Agent Economy · Real-World Money
 
-- Demo video: see the X post linked in the submission
+- Demo video: [on X](https://x.com/stubbornotterhq/status/2121694183538962781)
 - Live contract (testnet): [`vault.leash-demo-6866.testnet`](https://testnet.nearblocks.io/address/vault.leash-demo-6866.testnet)
 - Read-only dashboard: https://blackwingartisan.github.io/leash/
 
